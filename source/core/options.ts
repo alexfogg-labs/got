@@ -793,6 +793,8 @@ export type PaginationOptions<ElementType, BodyType> = {
 
 	It should return an object representing Got options pointing to the next page. The options are merged automatically with the previous request, therefore the options returned `pagination.paginate(...)` must reflect changes only. If there are no more pages, `false` should be returned.
 
+	When pagination navigates to a different origin, Got strips inherited sensitive headers such as `authorization`, `cookie`, and `proxy-authorization`. If you trust the next-page URL and want to forward a sensitive header, return it explicitly from `pagination.paginate(...)`.
+
 	@example
 	```
 	import got from 'got';

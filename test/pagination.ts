@@ -817,6 +817,75 @@ test('strips sensitive headers when pagination navigates cross-origin', async t 
 	await evilServer.close();
 });
 
+test('extended instance strips inherited authorization when custom pagination navigates cross-origin', async t => {
+	const createHttpTestServer = (await import('./helpers/create-http-test-server.js')).default;
+
+	const crossOriginServer = await createHttpTestServer();
+	const receivedAuthorizations: Array<string | undefined> = [];
+	crossOriginServer.get('/items', (request, response) => {
+		receivedAuthorizations.push(request.headers.authorization);
+		response.end('[2]');
+	});
+
+	const trustedServer = await createHttpTestServer();
+	trustedServer.get('/items', (_request, response) => {
+		response.end(JSON.stringify({
+			items: [1],
+			nextUrl: `${crossOriginServer.url}/items`,
+		}));
+	});
+
+	const instance = got.extend({
+		prefixUrl: trustedServer.url,
+		headers: {
+			authorization: 'Bearer SECRET',
+		},
+	});
+
+	const createPaginationOptions = (authorization?: string) => ({
+		pagination: {
+			requestLimit: 2,
+			transform(response: Response) {
+				const body = JSON.parse(response.body as string);
+				return Array.isArray(body) ? body : body.items;
+			},
+			paginate({response}: {response: Response}) {
+				const body = JSON.parse(response.body as string);
+
+				if (body.nextUrl && authorization) {
+					return {
+						url: new URL(body.nextUrl),
+						headers: {
+							authorization,
+						},
+					};
+				}
+
+				if (body.nextUrl) {
+					return {
+						url: new URL(body.nextUrl),
+					};
+				}
+
+				return false;
+			},
+		},
+	});
+
+	const items = await instance.paginate.all<number>('items', createPaginationOptions());
+
+	t.deepEqual(items, [1, 2]);
+	t.deepEqual(receivedAuthorizations, [undefined]);
+
+	const itemsWithExplicitAuthorization = await instance.paginate.all<number>('items', createPaginationOptions('Bearer SECRET'));
+
+	t.deepEqual(itemsWithExplicitAuthorization, [1, 2]);
+	t.deepEqual(receivedAuthorizations, [undefined, 'Bearer SECRET']);
+
+	await trustedServer.close();
+	await crossOriginServer.close();
+});
+
 test('strips cookie header when pagination navigates cross-origin', async t => {
 	const createHttpTestServer = (await import('./helpers/create-http-test-server.js')).default;
 

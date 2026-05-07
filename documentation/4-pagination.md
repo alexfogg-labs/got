@@ -132,6 +132,7 @@ Therefore the options returned by `pagination.paginate(…)` must reflect change
 **Note:**
 > - The `url` option (if set) accepts **only** a [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) instance.\
 >   This prevents `prefixUrl` ambiguity. In order to use a relative URL string, merge it via `new URL(relativeUrl, response.url)`.
+> - When pagination navigates to a different origin, Got strips inherited sensitive headers such as `authorization`, `cookie`, and `proxy-authorization`. If you trust the next-page URL and want to forward a sensitive header, return it explicitly from `pagination.paginate(…)`.
 
 #### `filter`
 
