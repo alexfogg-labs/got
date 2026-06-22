@@ -15,11 +15,15 @@ jobs:
           - 24
           - 22
         os:
-          - ubuntu-latest
+          - blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: ${{ github.repository }}-node-modules-${{ matrix.node-version }}
+          path: ./node_modules
       - run: npm install
       - run: npm run test
